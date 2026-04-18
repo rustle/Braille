@@ -1,0 +1,4 @@
+module CLiblouis {
+    header "liblouis.h"
+    export *
+}

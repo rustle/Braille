@@ -1,0 +1,6 @@
+[submodule "BRLTTY"]
+	path = BRLTTY
+	url = https://github.com/brltty/brltty.git
+[submodule "liblouis"]
+	path = liblouis
+	url = https://github.com/liblouis/liblouis.git

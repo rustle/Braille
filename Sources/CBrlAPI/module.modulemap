@@ -1,0 +1,5 @@
+module CBrlAPI [system] {
+    header "shim.h"
+    link "brlapi"
+    export *
+}
