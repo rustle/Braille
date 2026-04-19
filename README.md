@@ -4,11 +4,16 @@ Swift Package for [BrlAPI](https://brl.thefreecat.org) with some helpers.
 
 # Building
 
-```
-git submodule update --init
-./Scripts/build-brltty-macos.sh
+```bash
+swift package build-brltty
 swift build
 swift test
+```
+
+`build-brltty` is a command plugin that initialises git submodules and runs `Scripts/build-brltty-macos.sh`. Pass `-- --no-clean` to skip the configure step on subsequent builds:
+
+```bash
+swift package build-brltty -- --no-clean
 ```
 
 ## Verifying BRLTTY output

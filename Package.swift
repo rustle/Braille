@@ -25,6 +25,10 @@ let package = Package(
             name: "Braille",
             targets: ["Braille"]
         ),
+        .plugin(
+            name: "BuildBRLTTY",
+            targets: ["BuildBRLTTY"]
+        ),
     ],
     targets: [
         .systemLibrary(name: "CBrlAPI"),
@@ -54,6 +58,24 @@ let package = Package(
         .testTarget(
             name: "BrailleTests",
             dependencies: ["Braille"]
+        ),
+        .plugin(
+            name: "BuildBRLTTY",
+            capability: .command(
+                intent: .custom(
+                    verb: "build-brltty",
+                    description: "Build the BRLTTY daemon and libbrlapi from source"
+                ),
+                permissions: [
+                    .writeToPackageDirectory(
+                        reason: "Creates .build/brltty/ containing the compiled BRLTTY daemon and libbrlapi"
+                    ),
+                    .allowNetworkConnections(
+                        scope: .all(ports: []),
+                        reason: "Fetches BRLTTY and liblouis submodules if not yet populated"
+                    ),
+                ]
+            )
         ),
     ],
     swiftLanguageModes: [.v6]
