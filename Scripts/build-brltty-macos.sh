@@ -19,9 +19,25 @@
 
 set -euo pipefail
 
+# Parse arguments
+NO_CLEAN=0
+ARCH=""
+for arg in "$@"; do
+    case "$arg" in
+        --no-clean) NO_CLEAN=1 ;;
+        --arch=*) ARCH="${arg#--arch=}" ;;
+    esac
+done
+
+if [[ -n "$ARCH" && "$ARCH" != "arm64" && "$ARCH" != "x86_64" ]]; then
+    echo "error: --arch must be arm64 or x86_64" >&2
+    exit 1
+fi
+
 PACKAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_DIR="${PACKAGE_DIR}/BRLTTY"
-BUILD_DIR="${PACKAGE_DIR}/.build/brltty"
+# Arch-specific builds go to .build/brltty-<arch>/; native (unqualified) stays at .build/brltty/.
+BUILD_DIR="${PACKAGE_DIR}/.build/brltty${ARCH:+-$ARCH}"
 
 # Homebrew GNU tools on PATH for this script only
 GNU_BIN="/Users/doug/brew/opt/coreutils/libexec/gnubin"
@@ -36,12 +52,40 @@ expr length "test" &>/dev/null || { echo "error: GNU expr not on PATH (coreutils
 
 cd "${REPO_DIR}"
 
-if [[ "${1:-}" != "--no-clean" ]]; then
+if [[ "$NO_CLEAN" -eq 0 ]]; then
     echo "==> Running autogen..."
     ./autogen
 
-    echo "==> Configuring..."
-    mkdir -p "${BUILD_DIR}"
+    # Arch-specific flags: export as env vars so configure picks them up without
+    # requiring an array (arrays with spaces break under bash 3.2 set -u when
+    # passed as positional arguments). Configure respects CFLAGS/CXXFLAGS/LDFLAGS
+    # from the environment identically to VAR=value command-line arguments.
+    # On Apple Silicon, Rosetta 2 runs x86_64 configure-test binaries so
+    # --host is not needed; the tests execute natively through Rosetta.
+    if [[ -n "$ARCH" ]]; then
+        export CFLAGS="-arch ${ARCH}"
+        export CXXFLAGS="-arch ${ARCH}"
+        export LDFLAGS="-arch ${ARCH}"
+    fi
+
+    if [[ "$ARCH" == "x86_64" ]]; then
+        # All Homebrew libraries on Apple Silicon are arm64-only. For the x86_64
+        # cross-build we only need libbrlapi.dylib, so block the two routes
+        # configure uses to discover optional Homebrew packages:
+        #   1. pkg-config: clear LIBDIR (replaces compiled-in default) and PATH
+        #      so every package query returns "not found" while the binary itself
+        #      remains callable (PKG_CONFIG=/usr/bin/false failed the version check)
+        #   2. tclsh: set TCLSH to a real binary that produces no output — autoconf
+        #      uses a pre-set non-empty TCLSH without searching PATH, and when
+        #      BRLTTY runs `false tclcmd config` it gets empty output → TCL_OK=false
+        export PKG_CONFIG_LIBDIR=""
+        export PKG_CONFIG_PATH=""
+        export TCLSH=/usr/bin/false
+    fi
+
+    echo "==> Configuring${ARCH:+ (arch=${ARCH})}..."
+    rm -rf "${BUILD_DIR}"
+    mkdir "${BUILD_DIR}"
     cd "${BUILD_DIR}"
     "${REPO_DIR}/configure" \
         --without-libbraille \
@@ -49,7 +93,8 @@ if [[ "${1:-}" != "--no-clean" ]]; then
         --without-flite \
         --without-speechd \
         --with-screen-driver=no \
-        --with-api-socket-dir=/var/run
+        --with-api-socket-dir=/var/run \
+        --disable-x
 
     # Patch 1: strip the non-existent dylib1.o from the MKLIB linker command.
     # configure's darwin* case unconditionally appends it even when it can't

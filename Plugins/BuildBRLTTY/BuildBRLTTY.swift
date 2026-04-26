@@ -10,13 +10,26 @@ import PackagePlugin
 @main
 struct BuildBRLTTY: CommandPlugin {
     func performCommand(context: PluginContext, arguments: [String]) throws {
-        let packageDir = context.package.directory.string
+        let packageDir = context.package.directoryURL.path()
         try run("/usr/bin/git", ["-C", packageDir, "submodule", "update", "--init", "--recursive"])
-        let script = context.package.directory
-            .appending("Scripts", "build-brltty-macos.sh")
-            .string
-        let scriptArgs = arguments.contains("--no-clean") ? [script, "--no-clean"] : [script]
-        try run("/bin/bash", scriptArgs)
+
+        if arguments.contains("--xcframework") {
+            let script = context.package.directoryURL
+                .appending(components: "Scripts", "create-brlapi-xcframework.sh")
+                .path()
+            var scriptArgs = [script]
+            if arguments.contains("--universal") { scriptArgs += ["--universal"] }
+            if arguments.contains("--no-clean") { scriptArgs += ["--no-clean"] }
+            try run("/bin/bash", scriptArgs)
+        } else {
+            let script = context.package.directoryURL
+                .appending(components: "Scripts", "build-brltty-macos.sh")
+                .path()
+            var scriptArgs = [script]
+            if arguments.contains("--no-clean") { scriptArgs += ["--no-clean"] }
+            for arg in arguments where arg.hasPrefix("--arch=") { scriptArgs += [arg] }
+            try run("/bin/bash", scriptArgs)
+        }
     }
 
     private func run(_ executable: String, _ arguments: [String]) throws {

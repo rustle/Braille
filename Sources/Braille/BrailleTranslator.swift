@@ -15,14 +15,16 @@ public struct BrailleTranslator: Sendable {
     ///   - displayTable: Liblouis display table name or absolute path.
     ///   - tablesDirectory: Directory containing the liblouis tables. When
     ///     provided, table names are resolved relative to this directory.
-    ///     When nil, liblouis uses its built-in search order: the
-    ///     `LOUIS_TABLEPATH` environment variable, then `TABLESDIR`.
+    ///     When nil, falls back to the tables bundled inside BrlAPI.framework
+    ///     (present when using the binary XCFramework), then to liblouis's
+    ///     own search order (`LOUIS_TABLEPATH` env var, then `TABLESDIR`).
     public init(
         table: String = "en-nabcc.utb",
         displayTable: String = "text_nabcc.dis",
         tablesDirectory: String? = nil
     ) {
-        if let dir = tablesDirectory {
+        let resolvedDir = tablesDirectory ?? brlapiFrameworkTablesPath()
+        if let dir = resolvedDir {
             let base = dir.hasSuffix("/") ? dir : dir + "/"
             self.table = table.hasPrefix("/") ? table : base + table
             self.displayTable = displayTable.hasPrefix("/") ? displayTable : base + displayTable

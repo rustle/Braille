@@ -1,4 +1,6 @@
 .DS_Store
+/BrlAPI.xcframework
+/BrlAPI.xcframework.zip
 /.build
 /Packages
 /*.xcodeproj

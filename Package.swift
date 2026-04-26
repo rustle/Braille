@@ -1,19 +1,6 @@
 // swift-tools-version: 6.2
 
-import Foundation
 import PackageDescription
-
-// MARK: - Build directories
-
-// Resolve the real package root, accounting for SPM's VFS overlay which may
-// present #file as "<real_path>/main/Package.swift" during manifest evaluation.
-let manifestDir = URL(fileURLWithPath: #file).deletingLastPathComponent()
-let root = FileManager.default.fileExists(atPath: manifestDir.path)
-    ? manifestDir.path
-    : manifestDir.deletingLastPathComponent().path
-let brlttyLib = "\(root)/.build/brltty/Programs"
-
-// MARK: - Package definition
 
 let package = Package(
     name: "Braille",
@@ -31,7 +18,10 @@ let package = Package(
         ),
     ],
     targets: [
-        .systemLibrary(name: "CBrlAPI"),
+        .binaryTarget(
+            name: "BrlAPI",
+            path: "BrlAPI.xcframework"
+        ),
         .target(
             name: "CLiblouis",
             publicHeadersPath: ".",
@@ -41,19 +31,10 @@ let package = Package(
         ),
         .target(
             name: "Braille",
-            dependencies: ["CBrlAPI", "CLiblouis"],
-            linkerSettings: {
-                var settings: [LinkerSetting] = [.linkedLibrary("brlapi")]
-                // Only add the path flags when the directory actually exists on disk.
-                // Under Xcode's VFS overlay #file resolves to a synthetic path, so
-                // brlttyLib won't exist; Project.xcconfig supplies the paths instead.
-                if FileManager.default.fileExists(atPath: brlttyLib) {
-                    settings += [
-                        .unsafeFlags(["-L\(brlttyLib)", "-Xlinker", "-rpath", "-Xlinker", brlttyLib]),
-                    ]
-                }
-                return settings
-            }()
+            dependencies: ["BrlAPI", "CLiblouis"],
+            path: ".",
+            sources: ["Sources/Braille"],
+            resources: [.copy("liblouis/tables")]
         ),
         .testTarget(
             name: "BrailleTests",
