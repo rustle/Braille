@@ -74,7 +74,49 @@ swift build
 swift test
 ```
 
-### 3. Update `Package.swift`
+### 3. Sign and notarize the XCFramework
+
+The framework binaries must be signed with a Developer ID certificate before release.
+
+```bash
+codesign --force --sign "Developer ID Application: Your Name (TEAMID)" \
+  --timestamp \
+  BrlAPI.xcframework/macos-arm64_x86_64/BrlAPI.framework/Versions/A/BrlAPI
+
+codesign --force --sign "Developer ID Application: Your Name (TEAMID)" \
+  --timestamp \
+  BrlAPI.xcframework/macos-arm64_x86_64/BrlAPI.framework
+
+codesign --force --sign "Developer ID Application: Your Name (TEAMID)" \
+  --timestamp \
+  BrlAPI.xcframework
+```
+
+Verify the binary has a valid Developer ID signature:
+
+```bash
+codesign -dv BrlAPI.xcframework/macos-arm64_x86_64/BrlAPI.framework/Versions/A/BrlAPI
+# TeamIdentifier should match your team ID; no "adhoc" in the flags
+```
+
+Then notarize:
+
+```bash
+ditto -c -k --keepParent BrlAPI.xcframework BrlAPI.xcframework.zip
+
+xcrun notarytool submit BrlAPI.xcframework.zip \
+  --apple-id "your@email.com" \
+  --team-id "TEAMID" \
+  --wait
+```
+
+The checksum will change after signing — recompute it:
+
+```bash
+swift package compute-checksum BrlAPI.xcframework.zip
+```
+
+### 4. Update `Package.swift`
 
 Replace the conditional `BrlAPI` target with a URL binary target. You can construct the URL before uploading since GitHub release asset URLs are deterministic:
 
@@ -88,7 +130,7 @@ Replace the conditional `BrlAPI` target with a URL binary target. You can constr
 
 Commit this change.
 
-### 4. Tag, push, and publish
+### 5. Tag, push, and publish
 
 ```bash
 git tag 1.0.0

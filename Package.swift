@@ -20,8 +20,8 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "BrlAPI",
-            url: "https://github.com/rustle/Braille/releases/download/1.0.0/BrlAPI.xcframework.zip",
-            checksum: "51c386205d3d447fc71756ab7be3ca9b9f31662291519e9cc0fb2aed6dca77b5"
+            url: "https://github.com/rustle/Braille/releases/download/1.0.2/BrlAPI.xcframework.zip",
+            checksum: "635f16bbae3d81e33aabd47781a4354f8f11deb1cc21324a12a3113dc62d3fe8"
         ),
         .target(
             name: "CLiblouis",
