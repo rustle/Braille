@@ -62,7 +62,12 @@ Pass `--no-clean` to reuse existing BRLTTY build outputs:
 ```bash
 # Confirm both architectures are present
 lipo -info BrlAPI.xcframework/macos-arm64_x86_64/BrlAPI.framework/BrlAPI
+```
 
+(If the file isn't there, you may have forgotten --universal, which will change the path)
+
+
+```
 # Build and test against the local binary target
 # (Package.swift detects BrlAPI.xcframework and switches automatically)
 swift build

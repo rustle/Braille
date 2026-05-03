@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "Braille",
     platforms: [
-        .macOS(.v13),
+        .macOS(.v13)
     ],
     products: [
         .library(
@@ -20,13 +20,14 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "BrlAPI",
-            path: "BrlAPI.xcframework"
+            url: "https://github.com/rustle/Braille/releases/download/1.0.0/BrlAPI.xcframework.zip",
+            checksum: "51c386205d3d447fc71756ab7be3ca9b9f31662291519e9cc0fb2aed6dca77b5"
         ),
         .target(
             name: "CLiblouis",
             publicHeadersPath: ".",
             cSettings: [
-                .define("TABLESDIR", to: "\"\""),
+                .define("TABLESDIR", to: "\"\"")
             ]
         ),
         .target(
@@ -49,7 +50,8 @@ let package = Package(
                 ),
                 permissions: [
                     .writeToPackageDirectory(
-                        reason: "Creates .build/brltty/ containing the compiled BRLTTY daemon and libbrlapi"
+                        reason:
+                            "Creates .build/brltty/ containing the compiled BRLTTY daemon and libbrlapi"
                     ),
                     .allowNetworkConnections(
                         scope: .all(ports: []),
