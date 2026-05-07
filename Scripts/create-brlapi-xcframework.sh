@@ -101,6 +101,10 @@ codesign --sign - --force --identifier com.rustle.BrlAPI "$FW_VER/BrlAPI"
 # BrlAPI headers.
 cp "$HEADERS_DIR"/brlapi*.h "$FW_VER/Headers/"
 
+# liblouis public header — bundled so downstream Xcode consumers can resolve the
+# CLiblouis clang module without a manual HEADER_SEARCH_PATHS workaround.
+cp "$PACKAGE_DIR/Sources/CLiblouis/liblouis.h" "$FW_VER/Headers/"
+
 # Wrapper header: applies BRLAPI_NO_SINGLE_SESSION before including brlapi.h.
 cat > "$FW_VER/Headers/CBrlAPI.h" << 'HEADER'
 #ifndef CBrlAPI_h
@@ -113,6 +117,11 @@ HEADER
 cat > "$FW_VER/Modules/module.modulemap" << 'MODULEMAP'
 framework module BrlAPI {
     header "CBrlAPI.h"
+    export *
+}
+
+module CLiblouis {
+    header "liblouis.h"
     export *
 }
 MODULEMAP
