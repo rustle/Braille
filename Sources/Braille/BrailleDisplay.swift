@@ -11,8 +11,10 @@ public protocol BrailleDisplay: Sendable {
     func disconnect() async throws
     /// Number of cells on the physical display.
     var cellCount: Int { get async }
-    /// Write dot patterns to the display. `cells` is truncated to `cellCount` if longer.
-    func write(cells: [UInt8]) async throws
+    /// Send text to the display. Translation to dot patterns is performed
+    /// by the underlying transport (e.g. the BRLTTY daemon's configured
+    /// text/contraction tables).
+    func write(text: String) async throws
 }
 
 extension BrailleDisplay {

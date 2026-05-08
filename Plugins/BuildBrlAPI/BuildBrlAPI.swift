@@ -1,5 +1,5 @@
 //
-//  BuildBRLTTY.swift
+//  BuildBrlAPI.swift
 //
 //  Copyright © 2026 Doug Russell. All rights reserved.
 //
@@ -8,7 +8,7 @@ import Foundation
 import PackagePlugin
 
 @main
-struct BuildBRLTTY: CommandPlugin {
+struct BuildBrlAPI: CommandPlugin {
     func performCommand(context: PluginContext, arguments: [String]) throws {
         let packageDir = context.package.directoryURL.path()
         try run("/usr/bin/git", ["-C", packageDir, "submodule", "update", "--init", "--recursive"])

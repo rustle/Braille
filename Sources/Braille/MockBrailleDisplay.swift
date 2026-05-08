@@ -6,13 +6,13 @@
 
 public actor MockBrailleDisplay: BrailleDisplay {
     public nonisolated let cellCount: Int
-    public private(set) var lastCells: [UInt8] = []
+    public private(set) var lastText: String = ""
 
     public init(cellCount: Int = 40) {
         self.cellCount = cellCount
     }
 
-    public func write(cells: [UInt8]) async throws {
-        lastCells = Array(cells.prefix(cellCount))
+    public func write(text: String) async throws {
+        lastText = text
     }
 }

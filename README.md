@@ -1,33 +1,37 @@
 # Braille
 
-Swift Package for [BrlAPI](https://brl.thefreecat.org) with some helpers.
+Swift Package for [BrlAPI](https://brl.thefreecat.org), with some helpers.
+
+The package exposes a single `Braille` library that depends on the `BrlAPI` binary XCFramework target. Translation from text to braille dot patterns happens server-side in the BRLTTY daemon — this package sends text via `brlapi__writeWText` and lets the daemon apply its configured text/contraction tables.
 
 # Building
 
 ```bash
-swift package build-brltty
+swift package build-brlapi -- --xcframework
 swift build
 swift test
 ```
 
-`build-brltty` is a command plugin that initialises git submodules and runs `Scripts/build-brltty-macos.sh`. Pass `-- --no-clean` to skip the configure step on subsequent builds:
+`build-brlapi` is a command plugin that initialises the `BRLTTY` git submodule and runs `Scripts/build-brltty-macos.sh`. Pass `-- --no-clean` to skip the configure step on subsequent builds:
 
 ```bash
-swift package build-brltty -- --no-clean
+swift package build-brlapi -- --no-clean
 ```
 
 Pass `-- --arch=arm64` or `-- --arch=x86_64` to build for a specific architecture:
 
 ```bash
-swift package build-brltty -- --arch=arm64
+swift package build-brlapi -- --arch=arm64
 ```
 
 To build the xcframework directly from the plugin (equivalent to running the script manually):
 
 ```bash
-swift package build-brltty -- --xcframework --universal
-swift package build-brltty -- --xcframework --universal --no-clean
+swift package build-brlapi -- --xcframework --universal
+swift package build-brlapi -- --xcframework --universal --no-clean
 ```
+
+`Package.swift` ships with a URL-based `binaryTarget`, so a fresh clone resolves `BrlAPI.xcframework` from a published GitHub release without running the plugin. The plugin is only needed when working on BRLTTY itself or cutting a new release.
 
 ## Releasing
 
@@ -42,7 +46,7 @@ Run this on Apple Silicon — Rosetta 2 (installed by default) lets configure te
 Or via the plugin:
 
 ```bash
-swift package build-brltty -- --xcframework --universal
+swift package build-brlapi -- --xcframework --universal
 ```
 
 This compiles BRLTTY for arm64 and x86_64, `lipo`s the dylibs into a fat binary, and produces:
@@ -64,12 +68,9 @@ Pass `--no-clean` to reuse existing BRLTTY build outputs:
 lipo -info BrlAPI.xcframework/macos-arm64_x86_64/BrlAPI.framework/BrlAPI
 ```
 
-(If the file isn't there, you may have forgotten --universal, which will change the path)
+(If the file isn't there, you may have forgotten `--universal`, which changes the path.)
 
-
-```
-# Build and test against the local binary target
-# (Package.swift detects BrlAPI.xcframework and switches automatically)
+```bash
 swift build
 swift test
 ```
@@ -118,13 +119,13 @@ swift package compute-checksum BrlAPI.xcframework.zip
 
 ### 4. Update `Package.swift`
 
-Replace the conditional `BrlAPI` target with a URL binary target. You can construct the URL before uploading since GitHub release asset URLs are deterministic:
+Replace the URL/checksum on the `BrlAPI` `binaryTarget`:
 
 ```swift
 .binaryTarget(
     name: "BrlAPI",
-    url: "https://github.com/rustle/Braille/releases/download/1.0.0/BrlAPI.xcframework.zip",
-    checksum: "<checksum from step 1>"
+    url: "https://github.com/rustle/Braille/releases/download/<tag>/BrlAPI.xcframework.zip",
+    checksum: "<checksum from step 3>"
 ),
 ```
 
@@ -133,9 +134,9 @@ Commit this change.
 ### 5. Tag, push, and publish
 
 ```bash
-git tag 1.0.0
+git tag <tag>
 git push origin main --tags
-gh release create 1.0.0 BrlAPI.xcframework.zip --title "1.0.0"
+gh release create <tag> BrlAPI.xcframework.zip --title "<tag>"
 ```
 
 ### Local development after a release
@@ -211,25 +212,19 @@ BRLTTY auto-detects most USB and Bluetooth displays. Pass `-b <driver>` to force
 - The socket is created at `/var/run/BrlAPI.socket` (root) or `~/.BrlAPI.socket` (user).
 - If `/etc/brltty.conf` is absent, pass all options on the command line as shown above.
 
-## liblouis
+## Translation tables
 
-liblouis is vendored into this package as a Swift Package Manager C target (`Sources/CLiblouis/`) and compiled from source as part of a normal `swift build` — no separate build step or system install required. The liblouis source is a git submodule at `liblouis/`; run `git submodule update --init` to populate it.
+`BrlAPIDisplay.write(text:)` calls `brlapi__writeWText`, which sends raw text to the daemon. The daemon translates the text to dot patterns using its currently loaded text and contraction tables (the BRLTTY `.ttb` / `.ctb` formats).
 
-The translation tables live in `liblouis/tables/`. At compile time `TABLESDIR` is set to an empty string so liblouis makes no assumptions about the on-disk location; the tables are resolved at runtime via `Bundle.module` (see below).
+Pick a table on the daemon command line:
 
-To update the vendored sources to a newer liblouis release, advance the submodule and run `Scripts/build-liblouis-macos.sh` to regenerate the derived headers (`config.h`, `liblouis.h`) that are checked in alongside the C sources.
-
-## liblouis tables at runtime
-
-`BrailleTranslator` needs the liblouis translation tables at runtime. The `Braille` package declares `liblouis/tables` as a resource, so they are bundled automatically and resolved via `Bundle.module` — no extra wiring is required when using this package via SPM.
-
-For non-SPM embedding (e.g. adding the Braille sources directly to an Xcode project), pass an explicit path:
-
-```swift
-BrailleTranslator(tablesDirectory: Bundle.main.url(forResource: "tables", withExtension: nil)?.path)
+```bash
+sudo .build/brltty/Programs/brltty -T en-nabcc -b no -x no -n -A auth=none
 ```
 
-Or set the `LOUIS_TABLEPATH` environment variable to the absolute path of the tables directory before the process starts.
+Or set `text-table` / `contraction-table` in `/etc/brltty.conf`. The bundled tables live under `BRLTTY/Tables/Text/` and `BRLTTY/Tables/Contraction/`.
+
+Selecting the table is a daemon-level concern; the client has no API to override it.
 
 ## License
 

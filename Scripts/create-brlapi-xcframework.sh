@@ -17,7 +17,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
-TABLES_DIR="$PACKAGE_DIR/liblouis/tables"
 STAGING_DIR="$PACKAGE_DIR/.build/xcframework-staging"
 OUTPUT="$PACKAGE_DIR/BrlAPI.xcframework"
 ZIP_OUTPUT="$PACKAGE_DIR/BrlAPI.xcframework.zip"
@@ -30,11 +29,6 @@ for arg in "$@"; do
         --no-clean) NO_CLEAN=1 ;;
     esac
 done
-
-if [[ ! -d "$TABLES_DIR" ]]; then
-    echo "error: liblouis/tables not found. Run 'git submodule update --init'." >&2
-    exit 1
-fi
 
 # ── Build BRLTTY ──────────────────────────────────────────────────────────────
 
@@ -101,10 +95,6 @@ codesign --sign - --force --identifier com.rustle.BrlAPI "$FW_VER/BrlAPI"
 # BrlAPI headers.
 cp "$HEADERS_DIR"/brlapi*.h "$FW_VER/Headers/"
 
-# liblouis public header — bundled so downstream Xcode consumers can resolve the
-# CLiblouis clang module without a manual HEADER_SEARCH_PATHS workaround.
-cp "$PACKAGE_DIR/Sources/CLiblouis/liblouis.h" "$FW_VER/Headers/"
-
 # Wrapper header: applies BRLAPI_NO_SINGLE_SESSION before including brlapi.h.
 cat > "$FW_VER/Headers/CBrlAPI.h" << 'HEADER'
 #ifndef CBrlAPI_h
@@ -117,11 +107,6 @@ HEADER
 cat > "$FW_VER/Modules/module.modulemap" << 'MODULEMAP'
 framework module BrlAPI {
     header "CBrlAPI.h"
-    export *
-}
-
-module CLiblouis {
-    header "liblouis.h"
     export *
 }
 MODULEMAP

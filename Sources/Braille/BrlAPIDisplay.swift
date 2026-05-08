@@ -73,14 +73,16 @@ public actor BrlAPIDisplay: BrailleDisplay {
         handle = nil
     }
 
-    public func write(cells: [UInt8]) throws {
+    public func write(text: String) throws {
         guard let h = handle else { throw BrlAPIError.notConnected }
-        var buf = Array(cells.prefix(cellCount))
-        if buf.count < cellCount {
-            buf += [UInt8](repeating: 0, count: cellCount - buf.count)
+        // wchar_t is 32-bit on Darwin; map UnicodeScalar values directly
+        // and append the null terminator.
+        var buffer: [wchar_t] = text.unicodeScalars.map {
+            wchar_t(bitPattern: $0.value)
         }
-        let result = buf.withUnsafeBufferPointer { ptr in
-            brlapi__writeDots(h, ptr.baseAddress!)
+        buffer.append(0)
+        let result = buffer.withUnsafeBufferPointer { ptr in
+            brlapi__writeWText(h, BRLAPI_CURSOR_OFF, ptr.baseAddress)
         }
         guard result == 0 else {
             throw BrlAPIError.writeFailed(brlapiErrorString())
